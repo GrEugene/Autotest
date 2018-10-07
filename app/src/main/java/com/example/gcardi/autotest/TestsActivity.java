@@ -1,13 +1,16 @@
 package com.example.gcardi.autotest;
 
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -17,7 +20,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -26,7 +28,11 @@ import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
 public class TestsActivity extends AppCompatActivity implements View.OnClickListener {
 
-    private static final String TAG = "TestActivity";
+    private static final String TAG = "TestsActivity";
+    private static final String KEY_INDEX = "index";
+    private static final String KEY_MISTAKES = "mistakes";
+    private static final String KEY_LAND = "land";
+    private static final String KEY_STATE = "state";
 
     private Test[] questions = {
             new Test(R.string.question01, null, Arrays.asList(R.string.q01_a01, R.string.q01_a02, R.string.q01_a03), R.string.q01_ra),
@@ -45,51 +51,111 @@ public class TestsActivity extends AppCompatActivity implements View.OnClickList
     TestState state                     = new TestState();
     private int index                   = 0;
     private int mistakes                = 0;
+    private boolean land                = false;
     private List<RadioButton> rbList    = new ArrayList<>();
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(KEY_INDEX, index);
+        outState.putInt(KEY_MISTAKES, mistakes);
+        outState.putBoolean(KEY_LAND, land);
+        outState.putParcelable(KEY_STATE, state);
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tests);
+        Log.d(TAG, " : onCreate() called");
+
+        if (savedInstanceState != null) {
+            index = savedInstanceState.getInt(KEY_INDEX);
+            mistakes = savedInstanceState.getInt(KEY_MISTAKES);
+            land = savedInstanceState.getBoolean(KEY_LAND);
+            state = savedInstanceState.getParcelable(KEY_STATE);
+        }
 
         layout = findViewById(R.id.testLayout);
         addView(layout);
-        Log.d(TAG, "Create");
     }
 
     private void addView(LinearLayout layout) {
+        Display display         = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
+        final int orientation   = display.getOrientation();
 
-        if (mistakes < 2) {
+        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            if (mistakes < 2) {
 
-            // Создаем вопрос в TextView
-            TextView textView = createTextView();
+                // Создаем вопрос в TextView
+                TextView textView = createTextView();
 
-            // Создаем ImageView если он есть
-            ImageView imageView = createImageView();
+                // Создаем ImageView если он есть
+                ImageView imageView = createImageView();
 
-            // Создаем RadioGroup and RadioButtons
-            RadioGroup rGroup = createRadio();
+                // Создаем RadioGroup and RadioButtons
+                RadioGroup rGroup = createRadio();
 
-            // Создаем кнопку Next
-            Button next = createNext();
+                // Создаем кнопку Next
+                Button next = createNext();
 
-            // Создаем панель ответов
-            LinearLayout answerPanel = createPanelWithAnswers();
+                // Создаем панель ответов
+                LinearLayout answerPanel = createPanelWithAnswers();
 
 
-            // Добавляем все views на главный layout
-            layout.addView(answerPanel);
-            layout.addView(textView);
-            if (imageView != null) layout.addView(imageView);
-            layout.addView(rGroup);
-            layout.addView(next);
+                // Добавляем все views на главный layout
+                layout.addView(answerPanel);
+                layout.addView(textView);
+                if (imageView != null) layout.addView(imageView);
+                layout.addView(rGroup);
+                layout.addView(next);
 
+            } else {
+
+                layout.addView(createPanelWithAnswers());
+
+                TextView failTest = createFinishTextView(R.string.failTest);
+                layout.addView(failTest);
+            }
         } else {
+            land = true;
+            if (mistakes < 2) {
 
-            layout.addView(createPanelWithAnswers());
+                // Создаем вопрос в TextView
+                TextView textView = createTextView();
 
-            TextView failTest = createFinishTextView(R.string.failTest);
-            layout.addView(failTest);
+                //
+                LinearLayout l = new LinearLayout(TestsActivity.this);
+                l.setOrientation(LinearLayout.HORIZONTAL);
+
+                // Создаем ImageView если он есть
+                ImageView imageView = createImageView();
+
+                // Создаем RadioGroup and RadioButtons
+                RadioGroup rGroup = createRadio();
+
+                // Создаем кнопку Next
+                Button next = createNext();
+
+                // Создаем панель ответов
+                LinearLayout answerPanel = createPanelWithAnswers();
+
+                // Добавляем все views на главный layout
+                layout.addView(answerPanel);
+                layout.addView(textView);
+                if (imageView != null) l.addView(imageView);
+                l.addView(rGroup);
+                layout.addView(l);
+                layout.addView(next);
+
+            } else {
+
+                layout.addView(createPanelWithAnswers());
+
+                TextView failTest = createFinishTextView(R.string.failTest);
+                layout.addView(failTest);
+            }
         }
     }
 
@@ -116,7 +182,7 @@ public class TestsActivity extends AppCompatActivity implements View.OnClickList
     private TextView createTextView() {
         TextView textView = new TextView(TestsActivity.this);
         textView.setText(questions[index].getQuestion());
-        textView.setTextSize(25);
+        textView.setTextSize(20);
         textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
 
         return textView;
@@ -152,7 +218,7 @@ public class TestsActivity extends AppCompatActivity implements View.OnClickList
 
             RadioButton rBtn = (RadioButton) rGroup.getChildAt(i);
             rBtn.setText(list.get(i));
-            rBtn.setTextSize(20);
+            rBtn.setTextSize(15);
             rbList.add(rBtn);
             ViewGroup.MarginLayoutParams mp = (ViewGroup.MarginLayoutParams) rBtn.getLayoutParams();
             mp.setMargins(25, 10, 0, 0);
@@ -245,9 +311,9 @@ public class TestsActivity extends AppCompatActivity implements View.OnClickList
         RadioGroup group = null;
 
         if (questions[index].getImage_id() == null)
-            group = (RadioGroup) layout.getChildAt(2);
+            group = (land) ? (RadioGroup)((LinearLayout) layout.getChildAt(2)).getChildAt(0) : (RadioGroup)((LinearLayout) layout.getChildAt(2)).getChildAt(0);
         else
-            group = (RadioGroup) layout.getChildAt(3);
+            group = (land) ? (RadioGroup)((LinearLayout) layout.getChildAt(2)).getChildAt(1) : (RadioGroup)((LinearLayout) layout.getChildAt(2)).getChildAt(0);
 
         for (int i = 0; i < rbList.size(); i++) {
             if(rbList.get(i).getId() == group.getCheckedRadioButtonId()) {
@@ -265,5 +331,35 @@ public class TestsActivity extends AppCompatActivity implements View.OnClickList
             mistakes++;
             state.setStateRed(index);
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG, " : onStart() called");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, " : onResume() called");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, " : onPause() called");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d(TAG, " : onStop() called");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, " : onDestroy() called");
     }
 }
